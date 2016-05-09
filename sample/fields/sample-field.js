@@ -105,6 +105,6 @@ define(function(require, exports, module) {
 
     });
 
-    Alpaca.registerFieldClass("sample-field", Alpaca.Fields.FilePickerField);
+    Alpaca.registerFieldClass("sample-filefolder-picker", Alpaca.Fields.FilePickerField);
 
 });
