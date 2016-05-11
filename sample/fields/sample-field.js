@@ -1,110 +1,113 @@
-define(function(require, exports, module) {
-
-    var $ = require("jquery");
-
-    require("compiled_lib");
+(function($) {
 
     var Alpaca = $.alpaca;
 
-    Alpaca.Fields.FilePickerField = Alpaca.Fields.GitanaFileFolderPickerField.extend(
+    Alpaca.Fields.SampleField = Alpaca.Fields.TextField.extend(
+    /**
+     * @lends Alpaca.Fields.SampleField.prototype
+     */
     {
-        setup: function () {
+        /**
+         * @see Alpaca.Fields.TextField#getFieldType
+         */
+        getFieldType: function() {
+            return "sample";
+        },
 
-            var self = this;
-
-            if (!this.options.context)
-            {
-                this.options.context = {};
-            }
-
-            // if a _relator is configured, then we constrain the type
-            if (self.isMultiple())
-            {
-                if (self.schema.items && self.schema.items._relator)
-                {
-                    this.options.context.typeQName = self.schema.items._relator.nodeType;
-                }
-            }
-            else
-            {
-                if (self.schema._relator)
-                {
-                    this.options.context.typeQName = self.schema._relator.nodeType;
-                }
-            }
-
+        /**
+         * @see Alpaca.Fields.TextField#setup
+         */
+        setup: function()
+        {
             this.base();
         },
 
-        pickerConfiguration: function()
-        {
-            return {
-                "title": "Select a File",
-                "type": "sample-filefolder-picker"
-            };
-        },
-
-        generateItem: function(picked)
-        {
-            return {
-                "id": picked.id,
-                "ref": picked.ref,
-                "title": picked.title ? picked.title : picked._doc,
-                "qname": picked.qname,
-                "typeQName": picked.typeQName
-            };
-        },
-
-        populateValue: function(domElement, item)
+        afterRenderControl: function(model, callback)
         {
             var self = this;
 
-            var linkUrl = null;
+            this.base(model, function() {
+                self.on("ready", function(e){
+                    // screen draw is done
+                    if (self.options.dependentField)
+                    {
+                        // find the field and register a callback
+                        var dep = self.top().getControlByPath(self.options.dependentField);
+                        if (dep) {
+                            self.subscribe(dep, function(value) {
+                                self.setValue(value.toUpperCase());
+                            });
+                        }
+                    }
+                });
+                callback();
+            });
+        },
 
-            var project = self.options.context.project;
-            if (project)
-            {
-                linkUrl = "#/projects/" + project._doc + "/documents/" + item.id;
-            }
-
-            if (!linkUrl)
-            {
-                var branch = self.options.context.branch;
-                if (branch)
-                {
-                    linkUrl = "#/repositories/" + branch.getRepositoryId() + "/branches/" + branch.getId() + "/nodes/" + item.id;
-                }
-            }
-
-            var html = "";
-
-            if (linkUrl)
-            {
-                html += "<a href='" + linkUrl + "'>";
-            }
-            html += "<i class='fa fa-file-o'/>";
-            if (linkUrl)
-            {
-                html += "</a>";
-            }
-
-            html += "&nbsp;";
-
-            if (linkUrl)
-            {
-                html += "<a href='" + linkUrl + "'>";
-            }
-            html += (item.title ? item.title : item.id);
-            if (linkUrl)
-            {
-                html += "</a>";
-            }
-
-            $(domElement).append(html);
+        /**
+         * @see Alpaca.Fields.TextField#handleValidate
+         */
+        handleValidate: function()
+        {
+            return this.base();
         }
 
+        /* builder_helpers */
+        ,
+
+        /**
+         * @private
+         * @see Alpaca.Fields.TextField#getSchemaOfOptions
+         */
+        getSchemaOfOptions: function() {
+
+            return Alpaca.merge(this.base(), {
+                "properties": {
+                    "dependentField": {
+                        "title": "Dependent Field",
+                        "description": "Name of the form field from which the value of this field will be derived",
+                        "type": "string",
+                        "default": "",
+                        "readonly": true
+                    }
+                }
+            });
+
+        },
+
+        /**
+         * @private
+         * @see Alpaca.Fields.TextField#getOptionsForOptions
+         */
+        getOptionsForOptions: function() {
+            return Alpaca.merge(this.base(), {
+                "fields": {
+                    "dependentField": {
+                        "type": "text"
+                    }
+                }
+            });
+        },
+
+        /**
+         * @see Alpaca.Fields.TextField#getTitle
+         */
+        getTitle: function() {
+            return "Sample Field";
+        },
+
+        /**
+         * @see Alpaca.Fields.TextField#getDescription
+         */
+        getDescription: function() {
+            return "Copy the value from a dependent form field and make it upper case";
+        }
+
+        /* end_builder_helpers */
     });
 
-    Alpaca.registerFieldClass("sample-filefolder-picker", Alpaca.Fields.FilePickerField);
-
-});
+    Alpaca.registerMessages({
+        "noDependentField": "No dependent field found"
+    });
+    Alpaca.registerFieldClass("sample-field", Alpaca.Fields.SampleField);
+})(jQuery);
